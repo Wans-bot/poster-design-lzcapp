@@ -1,0 +1,122 @@
+package: cloud.lazycat.app.poster-design
+version: 2.0.0-4
+name: 迅排设计
+description: 开源在线平面设计工具：模板、素材、文字排版、图片处理与导出，数据留在自己的微服上。
+author: ShawnPhang
+license: AGPL-3.0
+homepage: https://github.com/palxiao/poster-design
+min_os_version: 1.5.0
+
+# 评审驳回 #20544「移动端截图为空，且不支持的平台也为空」：编辑器是桌面布局，
+# 移动端不提供支持，按官方 advanced-platform 在 package.yml 顶层声明不支持的客户端平台。
+unsupported_platforms:
+  - ios
+  - android
+
+permissions:
+  required:
+    - net.internet
+
+locales:
+  zh-CN:
+    name: 迅排设计
+    description: 开源在线平面设计工具：模板、素材、文字排版、图片处理与导出，数据留在自己的微服上。
+    usage: |
+      迅排设计是一套自托管的在线设计工具（同类于「稿定设计」）：选一个模板或空白画板，
+      用文字、素材、形状、图片拼出海报/封面/长图，再导出为 PNG 图片。
+      模板库、素材库、作品与上传的图片都存在你自己的微服上，重启和升级不会丢失。
+
+      首次使用：
+
+      1. 打开应用即为简体中文界面，并已自动登录（不需要手输账号密码），直接进入模板广场。
+      2. 点模板或「创建空白画板」进入编辑器；左侧是模板/素材/文字/图片/工具箱面板，
+         中间是画布，右侧是属性面板。
+      3. 导入自己的图片：编辑器内「我的」→ 上传图片，或直接把图片拖进画布。
+         选择文件时弹出统一窗口，可切换「网盘文件 / 本地文件」两种来源。
+      4. 从网盘直接打开：在懒猫网盘里对着 png/jpg/gif/webp 图片点右键，选「用迅排设计打开」，
+         应用会启动并把这张图导入「我的」；读取失败时界面会提示需要客户端登录会话。
+      5. 导出：点右上角「下载图片」，作品导出为 PNG 图片；保存时弹出统一窗口，
+         可直接写入懒猫网盘目录，也可保存到本机。
+
+      审核账号（应用自身登录，与微服账号无关；正常情况下不需要手输）：
+
+      - 账号：admin
+      - 密码：XpLzc-6Kt4Rm9v
+
+      账号切换：右下角有「切换账号」按钮，点击后退出当前登录并停用自动登录，可手动输入
+      其他账号；再次点击「使用默认账号登录」即可恢复自动登录。其他用户也可以自行注册账号，
+      各自的作品与素材互相隔离。
+
+      数据与限制：
+
+      - 作品、模板、素材与上传图片保存在微服的应用数据目录中，重启与升级不丢；升级不会
+        改变应用访问地址。
+      - 移动端暂不支持：编辑器为桌面布局，请使用电脑浏览器或桌面客户端打开。
+      - AI 文案 / AI 生图 / 智能配色为可选功能，默认关闭，需要管理员在「后台」里填写自己的
+        OpenAI 兼容接口地址与密钥后才能使用；未配置时界面会给出提示，不影响其他功能。
+      - 服务端渲染（导出图片、生成模板封面）使用应用自带的 Chromium，无需额外安装。
+      - 应用需要联网：内置模板素材与部分字体来自公共图床/CDN，离线环境下这些素材会显示为
+        空白，但本地素材与导出功能仍可用。
+
+      许可说明：
+
+      - 本应用按上游 AGPL-3.0 许可分发，随包附完整许可证文本（LICENSE、LICENSE-ZH）；
+        对应源码：https://github.com/palxiao/poster-design （本包附懒猫适配补丁）
+      - 上游产品页：https://xpai.design
+
+  en-US:
+    name: Poster Design
+    description: An open-source online graphic design tool for posters and layouts, with templates, assets, image editing and export, hosted on your own microserver.
+    usage: |
+      Poster Design is a self-hosted graphic design tool: start from a template or a blank
+      canvas, compose posters, covers and long images with text, assets, shapes and photos,
+      then export a PNG image. Templates, assets, your designs and uploads stay on
+      your own microserver and survive restarts and upgrades.
+
+      Getting started:
+
+      1. The app opens with a Chinese interface and signs you in automatically (no account
+         or password needed).
+      2. Pick a template or create a blank canvas to enter the editor. The left panel holds
+         templates, assets, text, photos and tools; the canvas is in the centre and the
+         property panel on the right.
+      3. To use your own photos, open "我的" (My) and upload, or drag an image onto the
+         canvas. A unified dialog lets you pick from the LazyCat cloud drive or local files.
+      4. You can also right-click a png/jpg/gif/webp image in the LazyCat cloud drive and
+         choose to open it with Poster Design: the app starts and imports the image into
+         the My panel. If the read is refused, the app tells you that a signed-in client
+         session is required.
+      5. Export with the "下载图片" (Download image) button: the design is exported as a
+         PNG image. The same unified dialog lets you save into a LazyCat cloud drive
+         folder or to your own device.
+
+      Review account (application-level login, unrelated to your microserver account; in
+      normal use you do not need to type it):
+
+      - account: admin
+      - password: XpLzc-6Kt4Rm9v
+
+      Switch account: the "切换账号" button at the bottom right logs out and disables
+      auto-login so you can sign in as someone else; click "使用默认账号登录" to restore
+      auto-login. Other users can register their own accounts; designs and assets are
+      isolated per account.
+
+      Data and limits:
+
+      - Designs, templates, assets and uploaded images are stored in the app data
+        directory on your microserver; restarts and upgrades keep them and the URL stays
+        unchanged.
+      - Mobile devices are not supported yet: the editor uses a desktop layout, so open it
+        from a desktop browser or the desktop client.
+      - AI copywriting, AI image generation and colour suggestions are optional and off by
+        default. An administrator must configure an OpenAI-compatible endpoint and key in
+        the admin panel first; the UI explains this when unconfigured, and other features
+        keep working.
+      - Server-side rendering (image export, template covers) uses the Chromium bundled in
+        the app image; nothing extra to install.
+      - The app needs internet access: some built-in template assets and fonts are loaded
+        from public CDNs, so offline they render blank, while local assets and export
+        still work.
+
+      License: distributed under the upstream AGPL-3.0 license (full text bundled as
+      LICENSE / LICENSE-ZH); source: https://github.com/palxiao/poster-design

@@ -1,0 +1,154 @@
+# 迅排设计 (Poster Design) · 懒猫 LPK V2 运行清单
+#
+# 形态：单容器（自定义镜像）= Express API + 编辑器前端静态资源 + 内置 Chromium 出图。
+# 上游默认是「nginx 前端 + node 后端 + 独立 Chrome」三段式，这里合并成一个容器，
+# 减少审核期镜像数与资源占用；前端由 Express 直接托管（见镜像内 service/src/main.ts）。
+#
+# 免密：browser 注入 xp-autologin.js。首屏若本地没有票据，就调用同源
+# POST /api/user/login（账号来自本次注入 params，与商店简介公开的审核账号一致），
+# 写入 localStorage.xp_token / xp_user 后重载一次；右下角提供「切换账号」控件。
+#
+# 缓存修正：Express 托管静态资源会带 ETag/Last-Modified，客户端一旦缓存过未注入的旧
+# 页面就会走 304 复用旧副本，导致注入不生效。request 阶段去掉条件请求头、response 阶段
+# 对 HTML 输出 no-store，确保注入每次送达。
+#
+# 网盘：官方文件桥（request）+ 官方文件选择器（browser），覆盖
+#   - 上传图片 / 素材（<input type=file>、el-upload）
+#   - 导出下载（<a download> 指向 blob: 的 PNG）
+# 另有 file_handler：网盘右键「用迅排设计打开」把图片直接导入「我的」。
+application:
+  subdomain: poster-design
+  # 网盘右键「用迅排设计打开」：把网盘图片交回本应用导入（官方 advanced-mime / spec/manifest）。
+  # %u 由平台替换成网盘文件路径，形如 files/home/图片/照片.png；应用侧由
+  # xp-open-from-netdisk.js 经同源文件桥取回后注入上传入口。
+  file_handler:
+    mime:
+      - image/png
+      - image/jpeg
+      - image/gif
+      - image/webp
+    actions:
+      open: /?lzcOpenFile=%u
+  routes:
+    - /=http://poster-design.cloud.lazycat.app.poster-design.lzcapp:7001
+  health_check:
+    test_url: http://poster-design.cloud.lazycat.app.poster-design.lzcapp:7001/
+    start_period: 180s
+    timeout: 10s
+  injects:
+    # ── 免密登录 / 账号切换（browser 阶段）──────────────────────────────────
+    - id: xp-login-autofill
+      'on': browser
+      auth_required: false
+      when:
+        - /*
+      do:
+        - src: file:///lzcapp/pkg/content/lazycat-injects/xp-autologin.js
+          params:
+            user: admin
+            password: XpLzc-6Kt4Rm9v
+    # ── 网盘右键「用迅排设计打开」（file_handler 的 open 动作，冷启动生效）───
+    - id: xp-open-from-netdisk
+      'on': browser
+      auth_required: false
+      when:
+        - /*
+      do:
+        - src: file:///lzcapp/pkg/content/lazycat-injects/xp-open-from-netdisk.js
+    # ── HTML 缓存修正：request 阶段去掉条件请求头 ───────────────────────────
+    - id: xp-strip-conditional-headers
+      'on': request
+      auth_required: false
+      when:
+        - /*
+      do: |
+        var accept = String(ctx.headers.get("Accept") || "");
+        if (accept.indexOf("text/html") < 0) return;
+        ctx.headers.del("If-None-Match");
+        ctx.headers.del("If-Modified-Since");
+    # ── HTML 缓存修正：response 阶段对 HTML 输出 no-store 并去掉 ETag ────────
+    - id: xp-html-no-store
+      'on': response
+      auth_required: false
+      when:
+        - /*
+      do: |
+        if (ctx.status !== 200) return;
+        var ct = String(ctx.headers.get("Content-Type") || "");
+        if (ct.indexOf("text/html") < 0) return;
+        ctx.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+        ctx.headers.del("ETag");
+        ctx.headers.del("Last-Modified");
+    # ── 网盘文件桥（request 阶段，官方《自动拦截文件选择器》专题）───────────
+    - id: lazycat-file-bridge
+      'on': request
+      auth_required: false
+      when:
+        - /__lazycat_file_bridge/*
+      do:
+        - src: |
+            const bridgePrefix = "/__lazycat_file_bridge";
+            const requestHost = String(ctx.request.host || "").split(":")[0].toLowerCase();
+            const firstDot = requestHost.indexOf(".");
+            const method = String(ctx.request.method || "").toUpperCase();
+            if (firstDot <= 0 || !requestHost.endsWith(".heiyu.space") ||
+                !["GET", "HEAD", "PUT"].includes(method)) {
+              ctx.response.send(["GET", "HEAD", "PUT"].includes(method) ? 400 : 405,
+                "Invalid LazyCat file bridge request");
+              return;
+            }
+            const boxDomain = requestHost.slice(firstDot + 1);
+            ctx.headers.del("Origin");
+            ctx.headers.del("Referer");
+            ctx.proxy.to("https://file." + boxDomain, {
+              path: "/files/home" + ctx.request.path.slice(bridgePrefix.length),
+              query: ctx.request.raw_query,
+              use_target_host: true,
+              timeout_ms: 120000,
+              on_fail: "error",
+            });
+    # ── 官方网盘文件选择器（browser 阶段）────────────────────────────────────
+    - id: open-save-chooser
+      'on': browser
+      auth_required: false
+      when:
+        - /*
+      do:
+        - src: >-
+            file:///lzcapp/pkg/content/lazycat-injects/lzc-file-chooser-inject.js
+          params:
+            diskRoot: /_lzc/files/home
+            fileBridgeRoot: /__lazycat_file_bridge
+            fallbackMime: application/octet-stream
+            locale: auto
+            hooks:
+              fileSystemAccess: true
+              fileInput: true
+              downloadAnchor: true
+
+services:
+  # ── 主服务：API + 前端静态资源 + 出图（服务名不能叫 app，那是平台内置网关）──
+  poster-design:
+    image: registry.lazycat.cloud/wans/pd-xunpai-20261014d:50b202672c79206e
+    environment:
+      - TZ=Asia/Shanghai
+      - PORT=7001
+      # 服务端出图时 Chromium 访问的编辑器地址（容器内自访问，避免依赖公网域名）
+      - SITE_URL=http://127.0.0.1:7001
+      - FILE_PATH=/app/service/static/
+      - WEB_DIST=/app/dist
+      - CHROME_PATH=/usr/bin/chromium
+      # 票据签名密钥：每台微服每应用稳定，重启后旧会话仍有效
+      - AUTH_SECRET={{ stable_secret "poster-design-auth" }}
+      # 首个管理员（商店审核账号，已在简介中公开；仅在数据库为空时创建）
+      - DEFAULT_ADMIN_ACCOUNT=admin
+      - DEFAULT_ADMIN_PASSWORD=XpLzc-6Kt4Rm9v
+    binds:
+      - /lzcapp/var/poster-design/data:/app/service/data
+      - /lzcapp/var/poster-design/static:/app/service/static
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1:7001/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 120s
